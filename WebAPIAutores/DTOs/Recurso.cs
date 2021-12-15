@@ -1,0 +1,9 @@
+﻿using System.Collections.Generic;
+
+namespace WebAPIAutores.DTOs
+{
+    public class Recurso
+    {
+        public List<DatoHATEOAS> Enlaces { get; set; } = new List<DatoHATEOAS>();
+    }
+}
