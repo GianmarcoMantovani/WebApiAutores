@@ -19,7 +19,7 @@ namespace WebAPIAutores.Utilidades
             this.generadorEnlaces = generadorEnlaces;
         }
 
-        public override async Task OnResultExecutionAsync (ResultExecutingContext context,
+        public async Task OnResultExecutionAsync (ResultExecutingContext context,
             ResourceExecutionDelegate next)
         {
             var debeIncluir = DebeIncluirHATEOAS(context); //Le asignamos a una variable que debe incluir HATEOAS
