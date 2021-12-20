@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +11,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using WebAPIAutores.DTOs;
 using WebAPIAutores.Entidades;
+using WebAPIAutores.Utilidades;
 
-namespace WebAPIAutores.Controllers
+namespace WebAPIAutores.Controllers.V1
 {
     [ApiController]
-    [Route("api/libros/{libroId:int}/comentarios")]
+    [Route("api/v1/libros/{libroId:int}/comentarios")]
     public class ComentariosController: ControllerBase
     {
         private readonly ApplicationDbContext context;
@@ -31,7 +33,7 @@ namespace WebAPIAutores.Controllers
         }
 
         [HttpGet(Name = "obtenerComentariosLibro")]
-        public async Task<ActionResult<List<ComentarioDTO>>> Get(int libroId)
+        public async Task<ActionResult<List<ComentarioDTO>>> Get(int libroId, [FromQuery]PaginacionDTO paginacionDTO)
         {
             var existeLibro = await context.Libros.AnyAsync(libroDB => libroDB.Id == libroId);
 
@@ -39,9 +41,10 @@ namespace WebAPIAutores.Controllers
             {
                 return NotFound();
             }
-
-            var comentarios = await context.Comentarios
-                .Where(comentarioDB => comentarioDB.LibroId == libroId).ToListAsync();
+            var queryable = context.Comentarios.Where(comentarioDB => comentarioDB.LibroId == libroId).AsQueryable();
+            await HttpContext.InsertarParametrosPaginacionEnCabecera(queryable);
+            var comentarios = await queryable.OrderBy(comentario => comentario.Id)
+                .Paginar(paginacionDTO).ToListAsync();
 
             return mapper.Map<List<ComentarioDTO>>(comentarios);
         }

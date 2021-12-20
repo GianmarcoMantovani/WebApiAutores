@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
 using WebAPIAutores.Filtros;
@@ -21,6 +23,7 @@ using WebAPIAutores.Middlewares;
 using WebAPIAutores.Servicios;
 using WebAPIAutores.Utilidades;
 
+[assembly: ApiConventionType(typeof(DefaultApiConventions))]
 namespace WebAPIAutores
 {
     public class Startup
@@ -39,6 +42,7 @@ namespace WebAPIAutores
             services.AddControllers(opciones =>
             {
                 opciones.Filters.Add(typeof(FiltroDeExcepcion));
+                opciones.Conventions.Add(new SwaggerAgrupaPorVersion());
             }).AddJsonOptions(x =>
                 x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles).AddNewtonsoftJson();
 
@@ -59,7 +63,24 @@ namespace WebAPIAutores
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebAPIAutores", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { 
+                    Title = "WebAPIAutores", 
+                    Version = "v1",
+                    Description = "Este es un web api para trabajar con autores y libros",
+                    Contact = new OpenApiContact
+                    {
+                        Email = "felipe@hotmail.com",
+                        Name = "Felipe Gavilan",
+                        Url = new Uri ("https://gavilan.blog")
+                    },
+                    License = new OpenApiLicense
+                    {
+                        Name = "MIT"
+                    }
+                });
+                c.SwaggerDoc("v2", new OpenApiInfo { Title = "WebAPIAutores", Version = "v2" });
+                c.OperationFilter<AgregarParametroHATEOAS>();
+                c.OperationFilter<AgregarParametroXVersion>();
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
@@ -85,6 +106,12 @@ namespace WebAPIAutores
                         new string[]{}
                     }
                 });
+
+                var archivoXML = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var rutaXML = Path.Combine(AppContext.BaseDirectory, archivoXML);
+                c.IncludeXmlComments(rutaXML);
+                //Tomamos un archivoXMl, tambien una rutaXML y mediante c. incluimos los comentarios XML y se visualizan en swagger
+
             });
 
             services.AddAutoMapper(typeof(Startup));
@@ -105,13 +132,17 @@ namespace WebAPIAutores
             {
                 opciones.AddDefaultPolicy(builder => //Aplicamos politicas
                 {
-                    builder.WithOrigins("https://apirequest.io").AllowAnyMethod().AllowAnyHeader();
+                    builder.WithOrigins("https://apirequest.io").AllowAnyMethod().AllowAnyHeader()
+                    .WithExposedHeaders(new string[] { "cantidadTotalRegistros" }); //exponemos los origenes y las cabeceras
+                    //sirve para cuando usamos angular, react, etc. le damos permiso para que lean las cabeceras personalizadas de la api
                 });
             });
 
             services.AddTransient<GeneradorEnlaces>();
             services.AddTransient<HATEOASAutorFilterAttribute>();
             services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
+
+            services.AddApplicationInsightsTelemetry(Configuration["ApplicationInsights:ConnectionString"]);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -126,7 +157,10 @@ namespace WebAPIAutores
             }
 
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "WebAPIAutores v1"));
+            app.UseSwaggerUI(c => {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "WebAPIAutores v1");
+                c.SwaggerEndpoint("/swagger/v2/swagger.json", "WebAPIAutores v2");
+            });
 
             app.UseHttpsRedirection();
 

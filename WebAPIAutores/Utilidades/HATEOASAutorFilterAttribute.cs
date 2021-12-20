@@ -18,9 +18,7 @@ namespace WebAPIAutores.Utilidades
         {
             this.generadorEnlaces = generadorEnlaces;
         }
-
-        public async Task OnResultExecutionAsync (ResultExecutingContext context,
-            ResourceExecutionDelegate next)
+        public override async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
         {
             var debeIncluir = DebeIncluirHATEOAS(context); //Le asignamos a una variable que debe incluir HATEOAS
 
@@ -35,12 +33,12 @@ namespace WebAPIAutores.Utilidades
             /* var modelo = resultado.Value as AutorDTO ?? throw new
                  ArgumentNullException("Se esperaba una instancia de AutorDTO"); //Tomamos el valor del AutorDTO y si es nulo devolvemos error*/
             var autorDTO = resultado.Value as AutorDTO;
-            if(autorDTO == null)
+            if (autorDTO == null)
             {
                 var autoresDTO = resultado.Value as List<AutorDTO> ?? throw new
                     ArgumentException("Se esperaba una instancia de AutorDTO o List<AutorDTO>");
 
-                autoresDTO.ForEach(async autor => await generadorEnlaces.GenerarEnlaces(autor)); 
+                autoresDTO.ForEach(async autor => await generadorEnlaces.GenerarEnlaces(autor));
                 resultado.Value = autoresDTO;
                 //Si es nulo devolvemos que se esperaba una instancia y le damos a resultado los enlaces de autorDTO
             }
@@ -48,10 +46,9 @@ namespace WebAPIAutores.Utilidades
             {
                 await generadorEnlaces.GenerarEnlaces(autorDTO); //Generamos los enlaces del AutorDTO
             }
-             
 
-             await next(); //Le indicamos al siguiente filtro que siga
 
+            await next(); //Le indicamos al siguiente filtro que siga
         }
     }
 }
